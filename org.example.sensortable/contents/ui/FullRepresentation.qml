@@ -97,6 +97,19 @@ Faces.SensorFace {
         return set
     }
 
+    // Dynamic range sensors that use min/max since start (not the visible window)
+    readonly property var globalSet: {
+        const set = {}
+        const lines = String(cfg.globalSensors || "").split("\n")
+        for (let i = 0; i < lines.length; ++i) {
+            const id = lines[i].trim()
+            if (id !== "") {
+                set[id] = true
+            }
+        }
+        return set
+    }
+
     function mix(a, b, t) {
         return Qt.rgba(a.r + (b.r - a.r) * t,
                        a.g + (b.g - a.g) * t,
@@ -155,13 +168,40 @@ Faces.SensorFace {
                 }
 
                 readonly property bool dynamic: root.dynamicSet[cell.modelData] === true
+                // Global: min/max since start. Otherwise: min/max in the shown window
+                readonly property bool globalRange: root.globalSet[cell.modelData] === true
+
+                // Lowest and highest value seen since start (global dynamic range)
+                property real seenMin: NaN
+                property real seenMax: NaN
+
+                function track() {
+                    const v = Number(sensor.value)
+                    if (!isFinite(v)) {
+                        return
+                    }
+                    if (isNaN(seenMin) || v < seenMin) {
+                        seenMin = v
+                    }
+                    if (isNaN(seenMax) || v > seenMax) {
+                        seenMax = v
+                    }
+                }
+
+                Connections {
+                    target: sensor
+                    function onValueChanged() {
+                        cell.track()
+                    }
+                }
+                Component.onCompleted: track()
 
                 // Lowest and highest value in the window that is shown now
                 // (the last sampleCount values of the history)
                 readonly property var windowRange: {
                     let lo = NaN
                     let hi = NaN
-                    if (dynamic) {
+                    if (dynamic && !globalRange) {
                         const h = cell.history
                         for (let i = Math.max(0, h.length - cell.sampleCount); i < h.length; ++i) {
                             const v = h[i]
@@ -189,8 +229,13 @@ Faces.SensorFace {
                     const own = root.sensorRanges[cell.modelData]
                     if (dynamic) {
                         // Dynamic range wins over everything else
-                        lo = windowRange.lo
-                        hi = windowRange.hi
+                        if (globalRange) {
+                            lo = seenMin
+                            hi = seenMax
+                        } else {
+                            lo = windowRange.lo
+                            hi = windowRange.hi
+                        }
                     } else if (own) {
                         lo = own.lo
                         hi = own.hi
@@ -217,7 +262,7 @@ Faces.SensorFace {
 
                 Timer {
                     interval: Math.max(100, cfg.sampleInterval)
-                    running: cell.hasGraph || cell.dynamic
+                    running: cell.hasGraph || (cell.dynamic && !cell.globalRange)
                     repeat: true
                     triggeredOnStart: true
                     onTriggered: {

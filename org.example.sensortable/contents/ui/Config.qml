@@ -93,6 +93,20 @@ Kirigami.FormLayout {
         cfg_dynamicSensors = Object.keys(set).join("\n")
     }
 
+    // Dynamic range sensors that use min/max since start, one sensor id per line
+    property string cfg_globalSensors
+    readonly property var globalSet: parseInverse(cfg_globalSensors)
+
+    function setGlobal(id, on) {
+        const set = parseInverse(cfg_globalSensors)
+        if (on) {
+            set[id] = true
+        } else {
+            delete set[id]
+        }
+        cfg_globalSensors = Object.keys(set).join("\n")
+    }
+
     property string cfg_sensorRanges
     readonly property var ranges: parseRanges(cfg_sensorRanges)
 
@@ -207,6 +221,12 @@ Kirigami.FormLayout {
                 text: i18n("Dynamic range")
                 checked: row.dyn
                 onToggled: page.setDynamic(row.modelData, checked)
+            }
+            QQC2.CheckBox {
+                text: i18n("Global min/max")
+                enabled: row.dyn
+                checked: page.globalSet[row.modelData] === true
+                onToggled: page.setGlobal(row.modelData, checked)
             }
             QQC2.CheckBox {
                 enabled: !row.dyn

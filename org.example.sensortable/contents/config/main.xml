@@ -26,5 +26,6 @@
     <entry name="noGraphSensors" type="String"><default></default></entry>
     <entry name="noBgSensors" type="String"><default></default></entry>
     <entry name="dynamicSensors" type="String"><default></default></entry>
+    <entry name="globalSensors" type="String"><default></default></entry>
   </group>
 </kcfg>
