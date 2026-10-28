@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kcfg xmlns="http://www.kde.org/standards/kcfg/1.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0 http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
+  <kcfgfile name=""/>
+  <group name="General">
+    <entry name="rangeAuto" type="Bool"><default>true</default></entry>
+    <entry name="rangeFrom" type="Int"><default>0</default></entry>
+    <entry name="rangeTo" type="Int"><default>100</default></entry>
+    <entry name="lowColor" type="Color"><default>#2e9e4f</default></entry>
+    <entry name="midColor" type="Color"><default>#d6a21e</default></entry>
+    <entry name="highColor" type="Color"><default>#d03a3a</default></entry>
+    <entry name="useMidColor" type="Bool"><default>true</default></entry>
+    <entry name="nameRatio" type="Int"><default>50</default></entry>
+    <entry name="fontSize" type="Int"><default>0</default></entry>
+    <entry name="boldValue" type="Bool"><default>true</default></entry>
+    <entry name="rowSpacing" type="Int"><default>2</default></entry>
+    <entry name="showLowPriority" type="Bool"><default>true</default></entry>
+    <entry name="showNames" type="Bool"><default>true</default></entry>
+    <entry name="nameFontSize" type="Int"><default>9</default></entry>
+    <entry name="cellHeight" type="Int"><default>0</default></entry>
+    <entry name="sampleInterval" type="Int"><default>1000</default></entry>
+    <entry name="sensorRanges" type="String"><default></default></entry>
+    <entry name="inverseSensors" type="String"><default></default></entry>
+    <entry name="noGraphSensors" type="String"><default></default></entry>
+  </group>
+</kcfg>

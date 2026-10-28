@@ -1,0 +1,11 @@
+{
+  "KPlugin": {
+    "Id": "org.example.sensortable",
+    "Name": "Sensor Table",
+    "Description": "Table: sensor name on the left, colored value on the right",
+    "Icon": "view-list-details",
+    "Version": "1.1"
+  },
+  "X-KDE-ParentApp": "org.kde.plasmashell",
+  "KPackageStructure": "KSysguard/SensorFace"
+}

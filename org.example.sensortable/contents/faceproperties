@@ -1,0 +1,3 @@
+[Config]
+SupportsSensorsColors=false
+SupportsLowPrioritySensors=true
