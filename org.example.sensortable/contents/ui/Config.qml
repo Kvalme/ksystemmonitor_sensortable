@@ -79,6 +79,20 @@ Kirigami.FormLayout {
         cfg_noBgSensors = Object.keys(set).join("\n")
     }
 
+    // Sensors with dynamic range, one sensor id per line
+    property string cfg_dynamicSensors
+    readonly property var dynamicSet: parseInverse(cfg_dynamicSensors)
+
+    function setDynamic(id, on) {
+        const set = parseInverse(cfg_dynamicSensors)
+        if (on) {
+            set[id] = true
+        } else {
+            delete set[id]
+        }
+        cfg_dynamicSensors = Object.keys(set).join("\n")
+    }
+
     property string cfg_sensorRanges
     readonly property var ranges: parseRanges(cfg_sensorRanges)
 
@@ -175,6 +189,7 @@ Kirigami.FormLayout {
             id: row
             required property string modelData
             readonly property var own: page.ranges[modelData]
+            readonly property bool dyn: page.dynamicSet[modelData] === true
 
             Kirigami.FormData.label: page.sensorTitle(modelData) + ":"
 
@@ -189,6 +204,12 @@ Kirigami.FormLayout {
                 onToggled: page.setNoBg(row.modelData, !checked)
             }
             QQC2.CheckBox {
+                text: i18n("Dynamic range")
+                checked: row.dyn
+                onToggled: page.setDynamic(row.modelData, checked)
+            }
+            QQC2.CheckBox {
+                enabled: !row.dyn
                 text: i18n("Own range")
                 checked: row.own !== undefined
                 onToggled: {
@@ -200,7 +221,7 @@ Kirigami.FormLayout {
                 }
             }
             QQC2.SpinBox {
-                enabled: row.own !== undefined
+                enabled: row.own !== undefined && !row.dyn
                 from: -100000
                 to: 100000
                 editable: true
@@ -211,7 +232,7 @@ Kirigami.FormLayout {
                 text: i18n("to")
             }
             QQC2.SpinBox {
-                enabled: row.own !== undefined
+                enabled: row.own !== undefined && !row.dyn
                 from: -100000
                 to: 100000
                 editable: true

@@ -130,6 +130,19 @@ Faces.SensorFace {
         applet.toolTipSubText = lines.join("\n")
     }
 
+    // Sensors with dynamic range (min/max seen on the sensor). One sensor id per line.
+    readonly property var dynamicSet: {
+        const set = {}
+        const lines = String(cfg.dynamicSensors || "").split("\n")
+        for (let i = 0; i < lines.length; ++i) {
+            const id = lines[i].trim()
+            if (id !== "") {
+                set[id] = true
+            }
+        }
+        return set
+    }
+
     function mix(a, b, t) {
         return Qt.rgba(a.r + (b.r - a.r) * t,
                        a.g + (b.g - a.g) * t,
@@ -184,21 +197,55 @@ Faces.SensorFace {
                     sensorId: cell.modelData
                 }
 
-                readonly property real level: {
+                readonly property bool dynamic: root.dynamicSet[cell.modelData] === true
+
+                // Lowest and highest value in the window that is shown now
+                // (the last sampleCount values of the history)
+                readonly property var windowRange: {
+                    let lo = NaN
+                    let hi = NaN
+                    if (dynamic) {
+                        const h = cell.history
+                        for (let i = Math.max(0, h.length - cell.sampleCount); i < h.length; ++i) {
+                            const v = h[i]
+                            if (!isFinite(v)) {
+                                continue
+                            }
+                            if (isNaN(lo) || v < lo) {
+                                lo = v
+                            }
+                            if (isNaN(hi) || v > hi) {
+                                hi = v
+                            }
+                        }
+                    }
+                    return { lo: lo, hi: hi }
+                }
+
+                // Converts a sensor value to a level from 0 to 1
+                function levelOf(value) {
+                    if (!isFinite(value)) {
+                        return 0
+                    }
                     let lo = cfg.rangeFrom
                     let hi = cfg.rangeTo
                     const own = root.sensorRanges[cell.modelData]
-                    if (own) {
-                        // Range set for this sensor wins over everything else
+                    if (dynamic) {
+                        // Dynamic range wins over everything else
+                        lo = windowRange.lo
+                        hi = windowRange.hi
+                    } else if (own) {
                         lo = own.lo
                         hi = own.hi
                     } else if (cfg.rangeAuto && sensor.maximum > sensor.minimum) {
                         lo = sensor.minimum
                         hi = sensor.maximum
                     }
-                    const v = hi > lo ? (Number(sensor.value) - lo) / (hi - lo) : 0
+                    const v = hi > lo ? (value - lo) / (hi - lo) : 0
                     return Math.max(0, Math.min(1, v))
                 }
+
+                readonly property real level: levelOf(Number(sensor.value))
 
                 readonly property bool inverse: root.inverseSet[cell.modelData] === true
 
@@ -206,19 +253,19 @@ Faces.SensorFace {
 
                 readonly property bool hasBg: root.noBgSet[cell.modelData] !== true
 
-                // History of levels, newest value is last
+                // History of sensor values, newest value is last
                 property var history: []
                 // One bar per pixel of graph width
                 readonly property int sampleCount: Math.max(2, Math.floor(graph.width))
 
                 Timer {
                     interval: Math.max(100, cfg.sampleInterval)
-                    running: cell.hasGraph
+                    running: cell.hasGraph || cell.dynamic
                     repeat: true
                     triggeredOnStart: true
                     onTriggered: {
                         let h = cell.history.slice()
-                        h.push(cell.level)
+                        h.push(Number(sensor.value))
                         if (h.length > cell.sampleCount) {
                             h = h.slice(h.length - cell.sampleCount)
                         }
@@ -271,7 +318,7 @@ Faces.SensorFace {
                             readonly property int sampleIndex:
                                 cell.history.length - (cell.sampleCount - index)
                             readonly property real v:
-                                sampleIndex >= 0 ? cell.history[sampleIndex] : -1
+                                sampleIndex >= 0 ? cell.levelOf(cell.history[sampleIndex]) : -1
 
                             visible: v >= 0
                             x: index
