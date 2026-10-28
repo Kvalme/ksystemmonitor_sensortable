@@ -22,6 +22,7 @@ Kirigami.FormLayout {
     property alias cfg_showNames: showNamesBox.checked
     property alias cfg_nameFontSize: nameFontSpin.value
     property alias cfg_cellHeight: cellHeightSpin.value
+    property alias cfg_noGraphHeight: noGraphHeightSpin.value
     property alias cfg_sampleInterval: intervalSpin.value
     // Per-sensor ranges, stored as text: one line "sensor/id = min, max"
     // Sensors with inverted colors, one sensor id per line
@@ -62,6 +63,20 @@ Kirigami.FormLayout {
             delete set[id]
         }
         cfg_noGraphSensors = Object.keys(set).join("\n")
+    }
+
+    // Sensors without background, one sensor id per line
+    property string cfg_noBgSensors
+    readonly property var noBgSet: parseInverse(cfg_noBgSensors)
+
+    function setNoBg(id, on) {
+        const set = parseInverse(cfg_noBgSensors)
+        if (on) {
+            set[id] = true
+        } else {
+            delete set[id]
+        }
+        cfg_noBgSensors = Object.keys(set).join("\n")
     }
 
     property string cfg_sensorRanges
@@ -167,6 +182,11 @@ Kirigami.FormLayout {
                 text: i18n("Graph")
                 checked: page.noGraphSet[row.modelData] !== true
                 onToggled: page.setNoGraph(row.modelData, !checked)
+            }
+            QQC2.CheckBox {
+                text: i18n("Background")
+                checked: page.noBgSet[row.modelData] !== true
+                onToggled: page.setNoBg(row.modelData, !checked)
             }
             QQC2.CheckBox {
                 text: i18n("Own range")
@@ -275,6 +295,12 @@ Kirigami.FormLayout {
     QQC2.SpinBox {
         id: cellHeightSpin
         Kirigami.FormData.label: i18n("Cell height in px (0 = auto):")
+        from: 0
+        to: 500
+    }
+    QQC2.SpinBox {
+        id: noGraphHeightSpin
+        Kirigami.FormData.label: i18n("Height without graph in px (0 = auto):")
         from: 0
         to: 500
     }

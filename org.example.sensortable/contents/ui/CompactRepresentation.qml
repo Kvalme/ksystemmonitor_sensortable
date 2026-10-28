@@ -1,4 +1,5 @@
 import QtQuick
+import QtQml
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
 import org.kde.ksysguard.faces as Faces
@@ -64,6 +65,71 @@ Faces.SensorFace {
         return set
     }
 
+    // Sensors without background (no track, no fill). One sensor id per line.
+    readonly property var noBgSet: {
+        const set = {}
+        const lines = String(cfg.noBgSensors || "").split("\n")
+        for (let i = 0; i < lines.length; ++i) {
+            const id = lines[i].trim()
+            if (id !== "") {
+                set[id] = true
+            }
+        }
+        return set
+    }
+
+    // ---- Panel tooltip: all sensors, with the names set in the face settings ----
+    // The tooltip belongs to the System Monitor applet, so we find its item
+    // and set the texts from here. (Workaround, see updateToolTip.)
+    readonly property var allSensorIds: {
+        const high = root.controller.highPrioritySensorIds
+        const low = root.controller.lowPrioritySensorIds
+        return (high ? Array.from(high) : []).concat(low ? Array.from(low) : [])
+    }
+
+    Instantiator {
+        id: tipSensors
+        model: root.allSensorIds
+        delegate: Sensors.Sensor {
+            required property var modelData
+            sensorId: modelData
+        }
+    }
+
+    Timer {
+        interval: 1000
+        running: true
+        repeat: true
+        triggeredOnStart: true
+        onTriggered: root.updateToolTip()
+    }
+
+    function updateToolTip() {
+        let applet = null
+        for (let p = root.parent; p; p = p.parent) {
+            if (p.plasmoidItem) {
+                applet = p.plasmoidItem
+                break
+            }
+        }
+        if (!applet) {
+            return
+        }
+        const labels = root.controller.sensorLabels
+        const lines = []
+        for (let i = 0; i < tipSensors.count; ++i) {
+            const s = tipSensors.objectAt(i)
+            if (!s) {
+                continue
+            }
+            const label = labels && labels[s.sensorId] ? labels[s.sensorId] : s.name
+            lines.push(label + ": " + s.formattedValue)
+        }
+        applet.toolTipMainText = root.controller.title ? root.controller.title : "Sensors"
+        applet.toolTipTextFormat = Text.PlainText
+        applet.toolTipSubText = lines.join("\n")
+    }
+
     function mix(a, b, t) {
         return Qt.rgba(a.r + (b.r - a.r) * t,
                        a.g + (b.g - a.g) * t,
@@ -96,15 +162,22 @@ Faces.SensorFace {
 
                 // Height from config (0 = auto, fill the available space)
                 readonly property bool fixedHeight: cfg.cellHeight > 0
+                // Without graph the cell has minimal height: one text line + name line
+                readonly property real minimalHeight:
+                    (cfg.noGraphHeight > 0 ? cfg.noGraphHeight : Kirigami.Units.gridUnit * 1.2)
+                    + (cfg.showNames ? nameText.implicitHeight : 0)
+
                 Layout.fillWidth: true
                 Layout.fillHeight: hasGraph && !fixedHeight
                 Layout.minimumWidth: Kirigami.Units.gridUnit * 2
-                Layout.minimumHeight: Kirigami.Units.gridUnit * 0.8
-                // Without graph the cell has minimal height
-                Layout.preferredHeight: (!hasGraph || fixedHeight)
-                    ? (hasGraph ? cfg.cellHeight : Kirigami.Units.gridUnit * 1.2)
-                        + (cfg.showNames ? nameText.implicitHeight : 0)
-                    : -1
+                Layout.minimumHeight: hasGraph ? Kirigami.Units.gridUnit * 0.8 : minimalHeight
+                // Maximum = minimum, so the layout can not stretch a cell without graph
+                Layout.maximumHeight: hasGraph ? Number.POSITIVE_INFINITY : minimalHeight
+                Layout.preferredHeight: !hasGraph
+                    ? minimalHeight
+                    : (fixedHeight
+                        ? cfg.cellHeight + (cfg.showNames ? nameText.implicitHeight : 0)
+                        : -1)
 
                 Sensors.Sensor {
                     id: sensor
@@ -130,6 +203,8 @@ Faces.SensorFace {
                 readonly property bool inverse: root.inverseSet[cell.modelData] === true
 
                 readonly property bool hasGraph: root.noGraphSet[cell.modelData] !== true
+
+                readonly property bool hasBg: root.noBgSet[cell.modelData] !== true
 
                 // History of levels, newest value is last
                 property var history: []
@@ -173,10 +248,18 @@ Faces.SensorFace {
                     id: graph
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    color: cell.hasGraph
-                        ? Qt.alpha(Kirigami.Theme.textColor, 0.12)
-                        : root.levelColor(cell.inverse ? 1 - cell.level : cell.level)
+                    color: cell.hasBg ? Qt.alpha(Kirigami.Theme.textColor, 0.12) : "transparent"
                     clip: true
+
+                    // Without graph: fill from the left, as wide as the sensor level
+                    Rectangle {
+                        visible: !cell.hasGraph && cell.hasBg
+                        x: 0
+                        y: 0
+                        width: graph.width * cell.level
+                        height: graph.height
+                        color: root.levelColor(cell.inverse ? 1 - cell.level : cell.level)
+                    }
 
                     Repeater {
                         model: cell.hasGraph ? cell.sampleCount : 0
@@ -207,8 +290,10 @@ Faces.SensorFace {
                         minimumPixelSize: 6
                         font.pixelSize: cfg.fontSize > 0 ? cfg.fontSize : 64
                         font.bold: cfg.boldValue
-                        color: "white"
-                        style: Text.Outline
+                        // Plain text when nothing is drawn behind it
+                        readonly property bool plain: !cell.hasGraph && !cell.hasBg
+                        color: plain ? Kirigami.Theme.textColor : "white"
+                        style: plain ? Text.Normal : Text.Outline
                         styleColor: "black"
                         text: sensor.formattedValue
                     }

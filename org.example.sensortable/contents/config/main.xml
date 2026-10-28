@@ -19,9 +19,11 @@
     <entry name="showNames" type="Bool"><default>true</default></entry>
     <entry name="nameFontSize" type="Int"><default>9</default></entry>
     <entry name="cellHeight" type="Int"><default>0</default></entry>
+    <entry name="noGraphHeight" type="Int"><default>0</default></entry>
     <entry name="sampleInterval" type="Int"><default>1000</default></entry>
     <entry name="sensorRanges" type="String"><default></default></entry>
     <entry name="inverseSensors" type="String"><default></default></entry>
     <entry name="noGraphSensors" type="String"><default></default></entry>
+    <entry name="noBgSensors" type="String"><default></default></entry>
   </group>
 </kcfg>
